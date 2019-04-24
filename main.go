@@ -12,16 +12,29 @@ import (
 )
 
 var (
-	token        = flag.String("github-token", os.Getenv("GITHUB_TOKEN"), "github token")
+	token        = flag.String("token", os.Getenv("GITHUB_TOKEN"), "github token, defaults to $GITHUB_TOKEN")
 	ignoreLabels = flag.String("ignore-labels", "Debug,Do Not Merge", "ignore PR-s with the specific labels")
 
 	repository = flag.String("repo", "", "repository owner/name")
+
+	byPath = flag.Bool("by-path", false, "group by path")
 )
 
 func main() {
 	flag.Parse()
 
 	ctx := context.Background()
+
+	if *token == "" || *repository == "" {
+		if *token == "" {
+			fmt.Fprintf(os.Stderr, "expected -token githubtoken\n")
+		}
+		if *repository == "" {
+			fmt.Fprintf(os.Stderr, "expected -repo owner/name\n")
+		}
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	client := githubv4.NewClient(
 		oauth2.NewClient(ctx, oauth2.StaticTokenSource(
@@ -44,53 +57,34 @@ func main() {
 	}
 
 	prs = IgnoreByLabels(prs, strings.Split(*ignoreLabels, ","))
-	group := GroupPullRequests(prs)
+	groupings := GroupPullRequests(prs)
+
+	group := groupings.Package
+	if *byPath {
+		group = groupings.Path
+	}
 
 	switch flag.Arg(0) {
 	case "":
 		fallthrough
-	case "packages":
-		DeleteSingle(group.Package)
-		for path, prs := range group.Package {
-			fmt.Println(path)
-			for _, pr := range prs {
-				fmt.Println("\t", pr)
-			}
-		}
-	case "paths":
-		DeleteSingle(group.Path)
-		for path, prs := range group.Path {
+	case "list":
+		DeleteSingle(group)
+		for path, prs := range group {
 			fmt.Println(path)
 			for _, pr := range prs {
 				fmt.Println("\t", pr)
 			}
 		}
 	case "changes":
-
-		switch flag.Arg(1) {
-		case "packages":
-			for path, prs := range group.Package {
-				if !strings.HasPrefix(path, flag.Arg(2)) {
-					continue
-				}
-				fmt.Println(path)
-				for _, pr := range prs {
-					fmt.Println("\t", pr)
-				}
+		prefixes := flag.Args()[1:]
+		for path, prs := range group {
+			if len(prefixes) > 0 && !hasAnyPrefix(path, prefixes) {
+				continue
 			}
-		case "paths":
-			for path, prs := range group.Path {
-				if !strings.HasPrefix(path, flag.Arg(2)) {
-					continue
-				}
-				fmt.Println(path)
-				for _, pr := range prs {
-					fmt.Println("\t", pr)
-				}
+			fmt.Println(path)
+			for _, pr := range prs {
+				fmt.Println("\t", pr)
 			}
-		default:
-			fmt.Fprintf(os.Stderr, "unknown sub-command %q", flag.Arg(1))
-			os.Exit(1)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown sub-command %q", flag.Arg(0))
