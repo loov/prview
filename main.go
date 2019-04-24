@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/shurcooL/githubv4"
@@ -17,7 +18,7 @@ var (
 
 	repository = flag.String("repo", "", "repository owner/name")
 
-	byPath = flag.Bool("by-path", false, "group by path")
+	groupBy = flag.String("group", "dir", "grouping by dir or path")
 )
 
 func main() {
@@ -50,48 +51,79 @@ func main() {
 	}
 	repositoryOwner, repositoryName := tokens[0], tokens[1]
 
-	prs, err := ListOpenPullRequests(ctx, client, repositoryOwner, repositoryName)
+	pullRequests, err := ListOpenPullRequests(ctx, client, repositoryOwner, repositoryName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to list pull requests: %v\n", err)
 		os.Exit(1)
 	}
 
-	prs = IgnoreByLabels(prs, strings.Split(*ignoreLabels, ","))
+	pullRequests = IgnoreByLabels(pullRequests, strings.Split(*ignoreLabels, ","))
+
+	grouping, found := groupFn[*groupBy]
+	if !found {
+		fmt.Fprintf(os.Stderr, "unknown %q group by\n", *groupBy)
+		os.Exit(1)
+	}
 
 	switch flag.Arg(0) {
 	case "conflicts":
-		var group Group
-		if *byPath {
-			group = GroupByPath(prs)
-		} else {
-			group = GroupByDir(prs)
-		}
-
+		group := GroupBy(pullRequests, grouping)
 		DeleteSingle(group)
-		for path, prs := range group {
+
+		group.Iter(func(path string, prs []*PullRequest) {
 			fmt.Println(path)
 			for _, pr := range prs {
 				fmt.Println("\t", pr)
 			}
-		}
-	case "changes":
-		var group Group
-		if *byPath {
-			group = GroupByPath(prs)
-		} else {
-			group = GroupByDir(prs)
+		})
+	case "conflicts-with":
+		prnumber, err := strconv.Atoi(flag.Arg(1))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid PR number %q\n", flag.Arg(1))
+			os.Exit(1)
 		}
 
-		prefixes := flag.Args()[1:]
-		for path, prs := range group {
-			if len(prefixes) > 0 && !hasAnyPrefix(path, prefixes) {
-				continue
+		var reference *PullRequest
+		for _, pr := range pullRequests {
+			if pr.Number == int32(prnumber) {
+				reference = pr
+				break
 			}
+		}
+		if reference == nil {
+			fmt.Fprintf(os.Stderr, "did not find PR %d\n", prnumber)
+			os.Exit(1)
+		}
+
+		conflicts, details := ConflictsWith(reference, pullRequests, grouping)
+		fmt.Printf("Conflicts for %v\n", reference)
+		for _, conflict := range conflicts {
+			fmt.Printf("\t%v\n", conflict)
+		}
+
+		fmt.Println()
+		fmt.Println("Details:")
+
+		details.Iter(func(path string, prs []*PullRequest) {
 			fmt.Println(path)
 			for _, pr := range prs {
 				fmt.Println("\t", pr)
 			}
-		}
+		})
+	case "changes":
+		group := GroupBy(pullRequests, grouping)
+		prefixes := flag.Args()[1:]
+
+		group.Iter(func(path string, prs []*PullRequest) {
+			if len(prefixes) > 0 && !hasAnyPrefix(path, prefixes) {
+				return
+			}
+
+			fmt.Println(path)
+			for _, pr := range prs {
+				fmt.Println("\t", pr)
+			}
+		})
 	default:
 		fmt.Fprintf(os.Stderr, "unknown sub-command %q\n", flag.Arg(0))
 		fmt.Fprintf(os.Stderr, "available commands:\n")
