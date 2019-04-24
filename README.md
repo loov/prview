@@ -21,6 +21,6 @@ prview conflicts-with 1204
 
 ## Setting up Github Token
 
-GitHub API requires authentication to add a OAuth token in [Github settings](https://github.com/settings/tokens).
+GitHub API requires authentication. You can create one in [Github settings](https://github.com/settings/tokens).
 
 Then either set the environment variable `GITHUB_TOKEN` or use `-token` command line argument.
