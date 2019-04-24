@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,10 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
+
+	if *repository == "" {
+		*repository = tryDetectRepository()
+	}
 
 	if *token == "" || *repository == "" {
 		if *token == "" {
@@ -92,7 +97,7 @@ func main() {
 			}
 		}
 		if reference == nil {
-			fmt.Fprintf(os.Stderr, "did not find PR %d\n", prnumber)
+			fmt.Fprintf(os.Stderr, "did not find open PR %d\n", prnumber)
 			os.Exit(1)
 		}
 
@@ -128,6 +133,27 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\tchanges [path]\n")
 		os.Exit(1)
 	}
+}
+
+func tryDetectRepository() string {
+	output, err := exec.Command("git", "remote", "get-url", "origin").Output()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "detecting repository failed: %v\n", err)
+		return ""
+	}
+
+	remote := strings.TrimSpace(string(output))
+
+	if trimmed := strings.TrimPrefix(remote, "https://github.com/"); trimmed != remote {
+		return strings.TrimSuffix(trimmed, ".git")
+	}
+
+	if trimmed := strings.TrimPrefix(remote, "git@github.com:"); trimmed != remote {
+		return strings.TrimSuffix(trimmed, ".git")
+	}
+
+	fmt.Fprintf(os.Stderr, "unexpected remote url: %q\n", remote)
+	return ""
 }
 
 func IgnoreByLabels(prs []*PullRequest, labels []string) []*PullRequest {
