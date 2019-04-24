@@ -68,7 +68,7 @@ func main() {
 	switch flag.Arg(0) {
 	case "conflicts":
 		group := GroupBy(pullRequests, grouping)
-		DeleteSingle(group)
+		deleteSingle(group)
 
 		group.Iter(func(path string, prs []*PullRequest) {
 			fmt.Println(path)
