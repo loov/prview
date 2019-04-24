@@ -6,8 +6,8 @@ Github PR analysis and viewing.
 # To list conflicting PR-s by directory
 prview conflicts
 
-# To list conflicting PR-s by path
-prview -group path conflicts
+# To list conflicting PR-s by file path
+prview -group file conflicts
 
 # To list changes by directory
 prview changes
