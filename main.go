@@ -76,6 +76,7 @@ func main() {
 				fmt.Println("\t", pr)
 			}
 		})
+
 	case "conflicts-with":
 		prnumber, err := strconv.Atoi(flag.Arg(1))
 		if err != nil {
@@ -95,21 +96,15 @@ func main() {
 			os.Exit(1)
 		}
 
-		conflicts, details := ConflictsWith(reference, pullRequests, grouping)
-		fmt.Printf("Conflicts for %v\n", reference)
+		conflicts, _ := ConflictsWith(reference, pullRequests, grouping)
 		for _, conflict := range conflicts {
-			fmt.Printf("\t%v\n", conflict)
+			fmt.Printf("%v\n", conflict.With)
+			for _, key := range conflict.Keys {
+				fmt.Printf("\t%v\n", key)
+			}
+			fmt.Println()
 		}
 
-		fmt.Println()
-		fmt.Println("Details:")
-
-		details.Iter(func(path string, prs []*PullRequest) {
-			fmt.Println(path)
-			for _, pr := range prs {
-				fmt.Println("\t", pr)
-			}
-		})
 	case "changes":
 		group := GroupBy(pullRequests, grouping)
 		prefixes := flag.Args()[1:]

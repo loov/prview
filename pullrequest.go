@@ -9,6 +9,11 @@ import (
 
 type Group map[string][]*PullRequest
 
+type PRConflict struct {
+	With *PullRequest
+	Keys []string
+}
+
 func (group Group) Iter(fn func(string, []*PullRequest)) {
 	keys := []string{}
 	for path := range group {
@@ -69,15 +74,16 @@ func GroupBy(prs []*PullRequest, key func(pr *PullRequest, file string) string) 
 	return group
 }
 
-func ConflictsWith(reference *PullRequest, prs []*PullRequest, key func(pr *PullRequest, file string) string) ([]*PullRequest, Group) {
+func ConflictsWith(reference *PullRequest, prs []*PullRequest, key func(pr *PullRequest, file string) string) ([]*PRConflict, Group) {
 	group := Group{}
 	for _, file := range reference.Files {
 		name := key(reference, file)
 		group[name] = nil
 	}
 
-	var all []*PullRequest
+	conflicts := []*PRConflict{}
 	for _, pr := range prs {
+		files := map[string]struct{}{}
 		for _, file := range pr.Files {
 			name := key(pr, file)
 
@@ -86,15 +92,25 @@ func ConflictsWith(reference *PullRequest, prs []*PullRequest, key func(pr *Pull
 				continue
 			}
 
+			files[name] = struct{}{}
+
 			if !containsPR(group[name], pr) {
 				group[name] = append(group[name], pr)
 			}
-			if !containsPR(all, pr) {
-				all = append(all, pr)
+		}
+
+		if len(files) > 0 {
+			conflict := &PRConflict{With: pr}
+			for file := range files {
+				conflict.Keys = append(conflict.Keys, file)
 			}
+			sort.Strings(conflict.Keys)
+
+			conflicts = append(conflicts, conflict)
 		}
 	}
-	return all, group
+
+	return conflicts, group
 }
 
 func DeleteZero(group map[string][]*PullRequest) {
