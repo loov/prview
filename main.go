@@ -119,6 +119,7 @@ func main() {
 				fmt.Println("\t", pr)
 			}
 		})
+
 	default:
 		fmt.Fprintf(os.Stderr, "unknown sub-command %q\n", flag.Arg(0))
 		fmt.Fprintf(os.Stderr, "available commands:\n")
