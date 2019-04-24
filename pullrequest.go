@@ -83,6 +83,10 @@ func ConflictsWith(reference *PullRequest, prs []*PullRequest, key func(pr *Pull
 
 	conflicts := []*PRConflict{}
 	for _, pr := range prs {
+		if pr.Number == reference.Number {
+			continue
+		}
+
 		files := map[string]struct{}{}
 		for _, file := range pr.Files {
 			name := key(pr, file)
