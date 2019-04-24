@@ -57,15 +57,16 @@ func main() {
 	}
 
 	prs = IgnoreByLabels(prs, strings.Split(*ignoreLabels, ","))
-	groupings := GroupPullRequests(prs)
-
-	group := groupings.Package
-	if *byPath {
-		group = groupings.Path
-	}
 
 	switch flag.Arg(0) {
 	case "conflicts":
+		var group Group
+		if *byPath {
+			group = GroupByPath(prs)
+		} else {
+			group = GroupByDir(prs)
+		}
+
 		DeleteSingle(group)
 		for path, prs := range group {
 			fmt.Println(path)
@@ -74,6 +75,13 @@ func main() {
 			}
 		}
 	case "changes":
+		var group Group
+		if *byPath {
+			group = GroupByPath(prs)
+		} else {
+			group = GroupByDir(prs)
+		}
+
 		prefixes := flag.Args()[1:]
 		for path, prs := range group {
 			if len(prefixes) > 0 && !hasAnyPrefix(path, prefixes) {

@@ -6,10 +6,7 @@ import (
 	"time"
 )
 
-type Group struct {
-	Package map[string][]*PullRequest
-	Path    map[string][]*PullRequest
-}
+type Group map[string][]*PullRequest
 
 type PullRequest struct {
 	Number int32
@@ -26,16 +23,11 @@ func (pr *PullRequest) String() string {
 	return fmt.Sprintf("#%d - %s %v", pr.Number, pr.Title, pr.Labels)
 }
 
-func GroupPullRequests(prs []*PullRequest) *Group {
-	packages := map[string][]*PullRequest{}
-	paths := map[string][]*PullRequest{}
+func GroupByDir(prs []*PullRequest) Group {
+	packages := Group{}
 
 	for _, pr := range prs {
 		for _, file := range pr.Files {
-			if !containsPR(paths[file], pr) {
-				paths[file] = append(paths[file], pr)
-			}
-
 			pkgname := path.Dir(file)
 			if !containsPR(packages[pkgname], pr) {
 				packages[pkgname] = append(packages[pkgname], pr)
@@ -43,10 +35,20 @@ func GroupPullRequests(prs []*PullRequest) *Group {
 		}
 	}
 
-	return &Group{
-		Package: packages,
-		Path:    paths,
+	return packages
+}
+
+func GroupByPath(prs []*PullRequest) Group {
+	paths := Group{}
+	for _, pr := range prs {
+		for _, file := range pr.Files {
+			if !containsPR(paths[file], pr) {
+				paths[file] = append(paths[file], pr)
+			}
+		}
 	}
+
+	return paths
 }
 
 func DeleteSingle(group map[string][]*PullRequest) {
