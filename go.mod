@@ -1,4 +1,4 @@
-module github.com/loov/pr-view
+module github.com/loov/prview
 
 go 1.12
 

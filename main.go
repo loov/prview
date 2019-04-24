@@ -65,9 +65,7 @@ func main() {
 	}
 
 	switch flag.Arg(0) {
-	case "":
-		fallthrough
-	case "list":
+	case "conflicts":
 		DeleteSingle(group)
 		for path, prs := range group {
 			fmt.Println(path)
@@ -87,7 +85,10 @@ func main() {
 			}
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown sub-command %q", flag.Arg(0))
+		fmt.Fprintf(os.Stderr, "unknown sub-command %q\n", flag.Arg(0))
+		fmt.Fprintf(os.Stderr, "available commands:\n")
+		fmt.Fprintf(os.Stderr, "\tconflicts\n")
+		fmt.Fprintf(os.Stderr, "\tchanges [path]\n")
 		os.Exit(1)
 	}
 }
