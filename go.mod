@@ -1,4 +1,4 @@
-module github.com/loov/merge-conflicts
+module github.com/loov/pr-view
 
 go 1.12
 
