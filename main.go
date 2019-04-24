@@ -123,6 +123,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "unknown sub-command %q\n", flag.Arg(0))
 		fmt.Fprintf(os.Stderr, "available commands:\n")
 		fmt.Fprintf(os.Stderr, "\tconflicts\n")
+		fmt.Fprintf(os.Stderr, "\tconflicts-with [PR number]\n")
 		fmt.Fprintf(os.Stderr, "\tchanges [path]\n")
 		os.Exit(1)
 	}
