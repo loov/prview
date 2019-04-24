@@ -4,14 +4,14 @@ Github PR analysis and viewing.
 
 ```
 # To list conflicting PR-s by directory
-pr-view conflicts
+prview conflicts
 
 # To list conflicting PR-s by path
-pr-view -by-path conflicts
+prview -by-path conflicts
 
 # To list changes by directory
-pr-view changes
+prview changes
 
 # To list changes to directory example
-pr-view changes example
+prview changes example
 ```
